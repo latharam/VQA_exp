@@ -1,0 +1,144 @@
+name: "VQA_exp"
+layer {
+  name: "data"
+  type: "HDF5Data"
+  top: "data"
+  top: "labels"
+  include {
+    phase: TRAIN
+  }
+  hdf5_data_param {
+    source: "models/VQA_exp/hdf5-data/train.txt"
+    batch_size: 1
+  }
+}
+layer {
+  name: "data"
+  type: "HDF5Data"
+  top: "data"
+  top: "labels"
+  include {
+    phase: TEST
+  }
+  hdf5_data_param {
+    source: "models/VQA_exp/hdf5-data/test.txt"
+    batch_size: 1
+  }
+}
+layer {
+    name: "reshape"
+    type: "Reshape"
+    bottom: "data"
+    top: "reshape"
+    reshape_param {
+      shape {
+        dim: 10  # copy the dimension from below
+        dim: 1
+        dim: 1
+        dim: -1 # infer it from the other dimensions
+      }
+   }
+}
+layer {
+  name: "ip"
+  type: "InnerProduct"
+  bottom: "reshape"
+  top: "ip"
+  param {
+    lr_mult: 1
+    decay_mult: 1
+  }
+  param {
+    lr_mult: 2
+    decay_mult: 0
+  }
+  inner_product_param {
+    num_output: 3
+    weight_filler {
+ #     type: "gaussian"
+ #     std: 0.005
+       type: "constant"
+       value: 1
+   }
+    bias_filler {
+      type: "constant"
+      value: 1
+    }
+  }
+}
+#layer {
+#    name: "reshape1"
+#    type: "Reshape"
+#    bottom: "ip"
+#    top: "reshape1"
+#    reshape_param {
+#      shape {
+#        dim: 1  # copy the dimension from below
+#        dim: 10
+#        dim: -1
+#        dim: 3 # infer it from the other dimensions
+#      }
+#   }
+#}
+layer {
+  name: "softmax"
+  type: "Softmax"
+  bottom: "ip" 
+  top: "softmax"
+}
+layer {
+  name: "slicer"
+  type: "Slice"
+  bottom: "softmax"
+  ## Example of label with a shape N x 3 x 1 x 1
+  top: "slice1"
+  top: "slice2"
+  slice_param {
+    axis: 1
+    slice_point: 2
+  }
+}
+layer {
+    name: "reshape2"
+    type: "Reshape"
+    bottom: "slice1"
+    top: "reshape2"
+    reshape_param {
+      shape {
+        dim: 1  # copy the dimension from below
+        dim: -1
+        dim: 10
+        dim: 2 # infer it from the other dimensions
+      }
+   }
+}
+layer {
+  name: "maxpool"
+  type: "Pooling"
+  bottom: "reshape2"
+  top: "maxpool"
+  pooling_param {
+    pool: MAX
+    kernel_h:10
+    kernel_w:1
+    stride: 1
+  }
+}
+layer {
+  name: "CrsEntropy"
+  type: "SigmoidCrossEntropyLoss"
+  #type: "SoftmaxWithLoss"
+  bottom: "maxpool"
+  bottom: "labels" 
+  top: "CrsEntropy"
+}
+layer {
+  name: "accuracy"
+  type: "Accuracy"
+  bottom: "maxpool"
+  bottom: "labels"
+  top: "accuracy"
+  include {
+    phase: TEST
+  }
+}

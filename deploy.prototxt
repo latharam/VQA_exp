@@ -1,0 +1,40 @@
+name: "VQA_exp"
+input: "data"
+input_dim: 1
+input_dim: 1
+input_dim: 10
+input_dim: 4
+layer {
+  name: "ip"
+  type: "InnerProduct"
+  bottom: "data"
+  top: "ip"
+  inner_product_param {
+    num_output: 3
+  }
+}
+layer {
+  name: "softmax"
+  type: "Softmax"
+  bottom: "ip" 
+  top: "softmax"
+}
+layer {
+  name: "maxpool"
+  type: "Pooling"
+  bottom: "softmax"
+  top: "maxpool"
+  pooling_param {
+    pool: MAX
+    kernel_w:1
+    kernel_h:10
+    stride: 1
+  }
+}
+layer {
+  name: "prob"
+  type: "Softmax"
+  bottom: "fc8"
+  top: "prob"
+}
+
